@@ -4,4 +4,3 @@ detoxify==0.5.1
 torch==2.2.2+cpu --index-url https://download.pytorch.org/whl/cpu
 gunicorn>=21.2.0
 tokenizers==0.12.1
-PYTHON_VERSION = 3.11.9
