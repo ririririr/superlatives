@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}My Votings | Superlatives{% endblock %}
+
+{% block content %}
+<section class="card">
+  <header class="card-header">
+    <div>
+      <h1>My Votings</h1>
+      <p class="lead">
+        Review and manage the votings you have created. Launch new ideas anytime!
+      </p>
+    </div>
+    <form method="get" class="sort-form">
+      <label for="sort">Sort by</label>
+      <select id="sort" name="sort" onchange="this.form.submit()">
+        <option value="recent" {% if sort_choice == 'recent' %}selected{% endif %}>Newest first</option>
+        <option value="popular" {% if sort_choice == 'popular' %}selected{% endif %}>Most participants</option>
+      </select>
+    </form>
+  </header>
+
+  <div class="create-voting-cta">
+    <a class="button create-button" href="{{ url_for('new_poll') }}">
+      + Create a New Voting
+    </a>
+  </div>
+
+  {% if polls %}
+  <ul class="poll-list">
+    {% for entry in polls %}
+    {% set poll = entry.poll %}
+    <li class="poll-item">
+      {% if poll.cover_image %}
+      <img
+        class="poll-cover"
+        src="{{ url_for('static', filename=poll.cover_image) }}"
+        alt="Cover image for {{ poll.title }}"
+      />
+      {% endif %}
+      <h2>{{ poll.title }}</h2>
+      {% if poll.description %}
+      <p class="poll-description">{{ poll.description }}</p>
+      {% endif %}
+      <div class="poll-meta">
+        <span>Released {{ poll.created_at.strftime("%b %d, %Y %I:%M %p") }}</span>
+        <span>{{ poll.options|length }} categories</span>
+      </div>
+      <div class="poll-stats">
+        <span>{{ entry.vote_count }} participant{% if entry.vote_count != 1 %}s{% endif %}</span>
+        <span>Chat {{ 'enabled' if poll.chat_enabled else 'disabled' }}</span>
+        <a class="button" href="{{ url_for('poll_detail', poll_id=poll.id) }}">View voting</a>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>You haven't created any votings yet. Start one to get the community talking!</p>
+  {% endif %}
+
+  {% if pagination.has_next %}
+  <div class="pagination">
+    <a
+      class="button secondary"
+      href="{{ url_for('my_polls', sort=sort_choice, page=pagination.next_num) }}"
+    >
+      Load more
+    </a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

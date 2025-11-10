@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Register | Superlatives{% endblock %}
+
+{% block content %}
+<section class="card form-card">
+  <h1>Create Account</h1>
+  <form method="post">
+    <label for="name">Name</label>
+    <input id="name" name="name" type="text" required />
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" required />
+
+    <button class="button" type="submit">Register</button>
+  </form>
+  <p class="form-footnote">
+    Already registered? <a href="{{ url_for('login') }}">Log in</a>.
+  </p>
+</section>
+{% endblock %}

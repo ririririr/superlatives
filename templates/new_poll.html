@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Create Voting | Superlatives{% endblock %}
+
+{% block content %}
+<section class="card form-card">
+  <h1>Create a New Voting</h1>
+  <form method="post" enctype="multipart/form-data">
+    <label for="title">Title</label>
+    <input
+      id="title"
+      name="title"
+      type="text"
+      value="{{ prefill_title }}"
+      required
+    />
+
+    <label for="description">Description <span class="optional">(optional)</span></label>
+    <textarea
+      id="description"
+      name="description"
+      rows="3"
+      placeholder="Tell everyone what this voting is about..."
+    >{{ prefill_description | default('', true) | trim }}</textarea>
+
+    <label for="cover_image">Cover Image <span class="optional">(optional)</span></label>
+    <input id="cover_image" name="cover_image" type="file" accept="image/*" />
+    <p class="input-footnote">Use a JPG, PNG, GIF, or WEBP image up to 10 MB.</p>
+    <input
+      type="hidden"
+      id="cover_image_path"
+      name="cover_image_path"
+      value="{{ prefill_cover_image or '' }}"
+    />
+    <div
+      class="cover-upload"
+      data-initial-url="{% if prefill_cover_image %}{{ url_for('static', filename=prefill_cover_image) }}{% endif %}"
+    >
+      <div class="cover-preview" id="cover-preview">
+        <img id="cover-preview-img" alt="Cover preview" />
+        <div class="cover-preview-actions">
+          <span class="cover-preview-label">Cover preview</span>
+          <button type="button" class="button secondary" id="remove-cover-image">
+            Remove cover
+          </button>
+        </div>
+      </div>
+      <div class="cover-upload-status">
+        <div class="cover-loader" id="cover-upload-loading" aria-hidden="true"></div>
+        <p class="cover-error" id="cover-upload-error"></p>
+      </div>
+    </div>
+
+    <div class="toggle-field">
+      <label class="checkbox">
+        <input
+          type="checkbox"
+          name="chat_enabled"
+          {% if prefill_chat_enabled %}checked{% endif %}
+        />
+        Enable chat below this voting
+      </label>
+      <p class="input-footnote">
+        Turn this off if you prefer voters to stay silent.
+      </p>
+    </div>
+
+    <label>Categories</label>
+    <div class="options-container" id="options-container">
+      {% set options = prefill_options if prefill_options and prefill_options|length > 0 else ["", ""] %}
+      {% for option in options %}
+      <div class="option-row">
+        <div class="option-field option-name">
+          <input
+            type="text"
+            name="options[]"
+            value="{{ option }}"
+            placeholder="Category name (e.g. Most Creative)"
+            required
+          />
+        </div>
+        <button type="button" class="remove-option" aria-label="Remove category">
+          Remove
+        </button>
+      </div>
+      {% endfor %}
+    </div>
+    <button type="button" class="button secondary" id="add-option">Add Category</button>
+
+    <button class="button" type="submit">Launch Voting</button>
+  </form>
+  <p class="form-footnote">
+    Categories are the choices people can vote on. Add at least two!
+  </p>
+</section>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const coverInput = document.getElementById("cover_image");
+    const coverPathInput = document.getElementById("cover_image_path");
+    const coverUploadContainer = document.querySelector(".cover-upload");
+    const coverPreview = document.getElementById("cover-preview");
+    const coverPreviewImg = document.getElementById("cover-preview-img");
+    const coverLoading = document.getElementById("cover-upload-loading");
+    const coverError = document.getElementById("cover-upload-error");
+    const removeCoverBtn = document.getElementById("remove-cover-image");
+    const uploadEndpoint = "{{ url_for('upload_cover_image') }}";
+    const deleteEndpoint = "{{ url_for('delete_cover_image') }}";
+
+    const togglePreview = (visible, url = "") => {
+      if (!coverPreview) return;
+      if (visible && url) {
+        coverPreviewImg.src = url;
+        coverPreview.classList.add("visible");
+      } else {
+        coverPreviewImg.removeAttribute("src");
+        coverPreview.classList.remove("visible");
+      }
+    };
+
+    const setLoading = (loading) => {
+      if (!coverLoading) return;
+      coverLoading.classList.toggle("active", loading);
+      if (loading && coverError) {
+        coverError.textContent = "";
+      }
+    };
+
+    const initialUrl = coverUploadContainer && coverUploadContainer.dataset.initialUrl;
+    if (initialUrl) {
+      togglePreview(true, initialUrl);
+    }
+
+    if (coverInput) {
+      coverInput.addEventListener("change", async () => {
+        const file = coverInput.files[0];
+        if (!file) return;
+        setLoading(true);
+        if (coverError) {
+          coverError.textContent = "";
+        }
+
+        const formData = new FormData();
+        formData.append("cover_image", file);
+        if (coverPathInput.value) {
+          formData.append("previous_path", coverPathInput.value);
+        }
+
+        try {
+          const response = await fetch(uploadEndpoint, {
+            method: "POST",
+            body: formData,
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || "Upload failed. Please try again.");
+          }
+          coverPathInput.value = data.path;
+          togglePreview(true, data.url);
+        } catch (error) {
+          if (coverError) {
+            coverError.textContent = error.message || "Upload failed. Please try again.";
+          }
+        } finally {
+          setLoading(false);
+          coverInput.value = "";
+        }
+      });
+    }
+
+    if (removeCoverBtn) {
+      removeCoverBtn.addEventListener("click", async () => {
+        const currentPath = coverPathInput.value;
+        coverPathInput.value = "";
+        togglePreview(false);
+        if (coverError) {
+          coverError.textContent = "";
+        }
+        coverInput.value = "";
+        if (!currentPath) return;
+
+        try {
+          await fetch(deleteEndpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Requested-With": "XMLHttpRequest",
+            },
+            body: JSON.stringify({ path: currentPath }),
+          });
+        } catch (error) {
+          console.warn("Failed to delete temporary cover image", error);
+        }
+      });
+    }
+
+    const container = document.getElementById("options-container");
+    const addButton = document.getElementById("add-option");
+    const minOptions = 2;
+
+    const updateRemoveState = () => {
+      const rows = container.querySelectorAll(".option-row");
+      rows.forEach((row) => {
+        const button = row.querySelector(".remove-option");
+        button.disabled = rows.length <= minOptions;
+      });
+    };
+
+    const attachRemoveHandler = (row) => {
+      const removeBtn = row.querySelector(".remove-option");
+      removeBtn.addEventListener("click", () => {
+        const rows = container.querySelectorAll(".option-row");
+        if (rows.length > minOptions) {
+          row.remove();
+          updateRemoveState();
+        }
+      });
+    };
+
+    const createOptionRow = (value = "") => {
+      const row = document.createElement("div");
+      row.className = "option-row";
+
+      const nameField = document.createElement("div");
+      nameField.className = "option-field option-name";
+      const nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.name = "options[]";
+      nameInput.placeholder = "Category name";
+      nameInput.required = true;
+      nameInput.value = value;
+      nameField.appendChild(nameInput);
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "remove-option";
+      removeBtn.setAttribute("aria-label", "Remove category");
+      removeBtn.textContent = "Remove";
+
+      row.append(nameField, removeBtn);
+      attachRemoveHandler(row);
+      return row;
+    };
+
+    addButton.addEventListener("click", () => {
+      const newRow = createOptionRow();
+      container.appendChild(newRow);
+      updateRemoveState();
+      const newInput = newRow.querySelector("input[name='options[]']");
+      if (newInput) {
+        newInput.focus();
+      }
+    });
+
+    container.querySelectorAll(".option-row").forEach(attachRemoveHandler);
+    updateRemoveState();
+  });
+</script>
+{% endblock %}

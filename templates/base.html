@@ -1,0 +1,79 @@
+{% import "macros/avatar.html" as avatar %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Superlatives{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  </head>
+  <body>
+    <div class="background-overlay"></div>
+    <nav class="navbar">
+      <div class="brand">
+        <a href="{{ url_for('index') }}">
+          <img
+            class="brand-logo"
+            src="{{ url_for('static', filename='uploads/theim.png') }}"
+            alt="Superlatives logo"
+          />
+          <span class="brand-name">Superlatives</span>
+        </a>
+      </div>
+      <div class="nav-links">
+        <a
+          href="{{ url_for('index') }}"
+          class="{% if request.endpoint == 'index' %}active{% endif %}"
+        >
+          All Votings
+        </a>
+        {% if current_user %}
+        <a
+          href="{{ url_for('my_polls') }}"
+          class="{% if request.endpoint == 'my_polls' %}active{% endif %}"
+        >
+          My Votings
+        </a>
+        {% if current_user_is_admin %}
+        <a
+          href="{{ url_for('admin_dashboard') }}"
+          class="{% if request.endpoint == 'admin_dashboard' %}active{% endif %}"
+        >
+          Admin
+        </a>
+        {% endif %}
+        <div class="nav-account">
+          <a
+            href="{{ url_for('profile') }}"
+            class="profile-link {% if request.endpoint == 'profile' %}active{% endif %}"
+          >
+            {{ avatar.render(current_user, "xs") }}
+            <span class="profile-name">{{ current_user.name }}</span>
+          </a>
+          <a class="logout-link" href="{{ url_for('logout') }}">Log Out</a>
+        </div>
+        {% else %}
+        <a href="{{ url_for('login') }}">Log In</a>
+        <a href="{{ url_for('register') }}">Register</a>
+        {% endif %}
+      </div>
+    </nav>
+    <main class="content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-container">
+        {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+      {% if current_user_is_frozen %}
+      <div class="flash flash-warning">
+        Your account is currently frozen. You can browse polls, but voting and commenting are disabled until an admin unfreezes you.
+      </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

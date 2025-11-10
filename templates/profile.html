@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% import "macros/avatar.html" as avatar %}
+
+{% block title %}Your Profile | Superlatives{% endblock %}
+
+{% block content %}
+<section class="card profile-card">
+  <div class="profile-top">
+    {{ avatar.render(user, "lg") }}
+    <div class="profile-meta">
+      <h1>Your Profile</h1>
+      <div class="profile-username">
+        <label for="username-display">Username</label>
+        <input
+          id="username-display"
+          type="text"
+          value="{{ user.name }}"
+          readonly
+        />
+      </div>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="profile-form">
+    <label for="profile_image">Profile Image</label>
+    <input
+      id="profile_image"
+      name="profile_image"
+      type="file"
+      accept="image/*"
+    />
+    <p class="input-footnote">
+      Upload a square PNG, JPG, JPEG, GIF, or WEBP up to 10&nbsp;MB.
+    </p>
+    <button class="button" type="submit">Update Photo</button>
+  </form>
+
+  <div class="profile-violations">
+    <div class="violation-text">
+      <h2>Moderation Attempts</h2>
+      <p class="input-footnote">
+        We keep track of comments our moderation model blocks so you can monitor your own history.
+      </p>
+    </div>
+    <div class="violation-chip tag tag-{{ violation_level(user.violation_count) }}">
+      Blocked attempts: {{ user.violation_count }}
+    </div>
+  </div>
+</section>
+{% endblock %}

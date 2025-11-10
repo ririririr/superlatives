@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% import "macros/avatar.html" as avatar %}
+
+{% block title %}{{ poll.title }} | Superlatives{% endblock %}
+
+{% block content %}
+<section class="card">
+  {% if poll.cover_image %}
+  <img
+    class="poll-cover detail-cover"
+    src="{{ url_for('static', filename=poll.cover_image) }}"
+    alt="Cover image for {{ poll.title }}"
+  />
+  {% endif %}
+  <h1>{{ poll.title }}</h1>
+  {% if poll.description %}
+  <p class="lead">{{ poll.description }}</p>
+  {% endif %}
+
+  <div class="poll-meta">
+    <span>Created by {{ poll.creator.name }}</span>
+    <span>Released {{ poll.created_at.strftime("%b %d, %Y %I:%M %p") }}</span>
+  </div>
+  <div class="poll-stats">
+    <span>{{ total_votes }} participant{% if total_votes != 1 %}s{% endif %}</span>
+    <span>{{ poll.options|length }} categories</span>
+    <span>Chat {% if poll.chat_enabled %}enabled{% else %}disabled{% endif %}</span>
+  </div>
+  {% if current_user_is_admin %}
+  <div class="admin-actions">
+    <form
+      method="post"
+      action="{{ url_for('admin_delete_poll', poll_id=poll.id) }}"
+      onsubmit="return confirm('Delete this poll and everything attached to it?');"
+    >
+      <button class="button danger" type="submit">Delete Poll</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if can_vote %}
+  <p class="lead">
+    Cast your vote to reveal the live results.
+  </p>
+  <form method="post" class="vote-form">
+    <input type="hidden" name="action" value="vote" />
+    {% for option in poll.options %}
+    <label class="vote-option">
+      <input type="radio" name="option" value="{{ option.id }}" required />
+      <div class="vote-content">
+        <span class="option-label">{{ option.name }}</span>
+        {% if option.image_path %}
+        <img
+          class="option-thumb"
+          src="{{ url_for('static', filename=option.image_path) }}"
+          alt="{{ option.name }} preview"
+        />
+        {% endif %}
+      </div>
+    </label>
+    {% endfor %}
+    <button class="button" type="submit">Submit Vote</button>
+  </form>
+  {% elif user_is_frozen %}
+  <p class="lead">You cannot vote while your account is frozen.</p>
+  {% elif not can_view_results %}
+  <p class="lead">
+    Voting is closed for this poll.
+  </p>
+  {% endif %}
+
+  {% if can_view_results %}
+  <div class="results">
+    <h2>Current Results</h2>
+    <ul class="results-list">
+      {% for entry in options_with_counts %}
+      <li class="results-item">
+        <div class="result-label">
+          <div class="result-title">
+            <span class="option-name">{{ entry.option.name }}</span>
+            {% if entry.option.image_path %}
+            <img
+              class="option-thumb"
+              src="{{ url_for('static', filename=entry.option.image_path) }}"
+              alt="{{ entry.option.name }} preview"
+            />
+            {% endif %}
+          </div>
+          <span class="vote-count">{{ entry.count }} vote{% if entry.count != 1 %}s{% endif %}</span>
+        </div>
+        <div class="progress">
+          <div class="progress-bar" style="width: {{ entry.percentage }}%">
+            {{ entry.percentage }}%
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if poll.chat_enabled %}
+  <div class="chat-section">
+    <h2>Discussion</h2>
+    {% if is_owner or vote %}
+    {% if messages %}
+    <ul class="chat-list">
+      {% for message in messages %}
+      <li class="chat-message">
+        <div class="chat-avatar">
+          {{ avatar.render(message.user, "sm") }}
+        </div>
+        <div class="chat-bubble">
+          <p>{{ message.content }}</p>
+          {% if current_user_is_admin %}
+          <form
+            class="comment-admin-form"
+            method="post"
+            action="{{ url_for('delete_comment', poll_id=poll.id, comment_id=message.id) }}"
+            onsubmit="return confirm('Delete this comment permanently?');"
+          >
+            <button class="comment-delete-button" type="submit">Delete</button>
+          </form>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="chat-empty">No messages yet. Start the conversation!</p>
+    {% endif %}
+    {% if user_is_frozen %}
+    <p class="lead">You cannot post messages while your account is frozen.</p>
+    {% else %}
+    <form method="post" class="chat-form">
+      <input type="hidden" name="action" value="message" />
+      <label for="message" class="sr-only">Message</label>
+      <textarea
+        id="message"
+        name="message"
+        rows="3"
+        placeholder="Share your thoughts..."
+        required
+      ></textarea>
+      <div class="chat-actions">
+        <button class="button" type="submit">Send</button>
+        <div class="chat-loader" aria-hidden="true"></div>
+      </div>
+    </form>
+    {% endif %}
+    {% elif user_is_frozen %}
+    <p class="lead">You cannot post messages while your account is frozen.</p>
+    {% else %}
+    <p class="lead">Chat unlocks after you vote.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const chatForm = document.querySelector(".chat-form");
+    if (!chatForm) return;
+
+    chatForm.addEventListener("submit", () => {
+      chatForm.classList.add("chat-form--loading");
+      const submitBtn = chatForm.querySelector("button[type='submit']");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+      }
+    });
+  });
+</script>
+{% endblock %}

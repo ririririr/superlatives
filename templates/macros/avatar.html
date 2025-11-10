@@ -1,0 +1,21 @@
+{% macro render(user, size="md", extra_classes="") %}
+  {% set name = user.name if user else "?" %}
+  {% set profile_image = user.profile_image if user else None %}
+  {% set classes = "avatar avatar-" ~ size %}
+  {% if extra_classes %}
+    {% set classes = classes ~ " " ~ extra_classes %}
+  {% endif %}
+  {% if profile_image %}
+    <span class="{{ classes }} avatar-has-image">
+      <img
+        src="{{ url_for('static', filename=profile_image) }}"
+        alt="{{ name }} profile image"
+        loading="lazy"
+      />
+    </span>
+  {% else %}
+    <span class="{{ classes }} avatar-initial" aria-hidden="true">
+      {{ name[:1]|upper }}
+    </span>
+  {% endif %}
+{% endmacro %}

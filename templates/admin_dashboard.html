@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard | Superlatives{% endblock %}
+
+{% block content %}
+<section class="card">
+  <header class="card-header">
+    <div>
+      <h1>Admin Dashboard</h1>
+      <p class="lead">
+        Moderate polls and manage student access from a single place.
+      </p>
+    </div>
+  </header>
+
+  <div class="admin-section">
+    <h2>User Management</h2>
+    <p class="admin-meta">
+      Freeze or unfreeze accounts to pause participation without removing access.
+    </p>
+    {% if users %}
+    <ul class="admin-user-list">
+      {% for user in users %}
+      <li class="admin-card">
+        <div class="admin-card-info">
+          <strong>{{ user.name }}</strong>
+          <div class="admin-tags">
+            {% if user.is_admin %}
+            <span class="tag tag-info">Admin</span>
+            {% endif %}
+            {% if user.is_frozen %}
+            <span class="tag tag-warning">Frozen</span>
+            {% endif %}
+            <span class="tag tag-{{ violation_level(user.violation_count) }}">
+              Violations: {{ user.violation_count }}
+            </span>
+          </div>
+        </div>
+        <div class="admin-actions">
+          {% if user.is_admin %}
+          <span class="tag tag-info">Protected</span>
+          {% else %}
+          <form method="post" action="{{ url_for('toggle_user_freeze', user_id=user.id) }}">
+            {% if user.is_frozen %}
+            <button class="button secondary" type="submit">Unfreeze</button>
+            {% else %}
+            <button class="button danger" type="submit">Freeze</button>
+            {% endif %}
+          </form>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p>No users found.</p>
+    {% endif %}
+  </div>
+
+  <div class="admin-section">
+    <h2>Poll Moderation</h2>
+    <p class="admin-meta">
+      Remove a poll to delete it along with all votes, options, and comments.
+    </p>
+    {% if polls %}
+    <ul class="admin-poll-list">
+      {% for entry in polls %}
+      {% set poll = entry.poll %}
+      <li class="admin-card">
+        <div class="admin-card-info">
+          <strong>{{ poll.title }}</strong>
+          <p class="admin-meta">
+            Created by {{ poll.creator.name }} · {{ entry.vote_count }} vote{% if entry.vote_count != 1 %}s{% endif %}
+          </p>
+        </div>
+        <div class="admin-actions">
+          <a class="button secondary" href="{{ url_for('poll_detail', poll_id=poll.id) }}">View</a>
+          <form
+            method="post"
+            action="{{ url_for('admin_delete_poll', poll_id=poll.id) }}"
+            onsubmit="return confirm('Delete this poll and everything attached to it?');"
+          >
+            <button class="button danger" type="submit">Delete</button>
+          </form>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p>No polls found.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
